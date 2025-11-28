@@ -75,7 +75,7 @@ class SyncConfigApp(tk.Tk):
         # Open the setup guide
         self.create_setup_guide_widget()
         
-    # --- File Loading and Saving (Updated for CANVAS_URL) ---
+    # --- File Loading and Saving (Updated for CANVAS_TOKEN consistency) ---
 
     def load_config_py(self):
         """Loads configuration variables from config.py."""
@@ -149,7 +149,7 @@ class SyncConfigApp(tk.Tk):
 # WARNING: Do not share this file. It contains sensitive credentials.
 
 CANVAS_URL = "{canvas_url}"
-CANVAS_ACCESS_TOKEN = "{token}"
+CANVAS_TOKEN = "{token}" # <--- UPDATED to CANVAS_TOKEN
 RECLAIM_EMAIL = "{email}"
 RECLAIM_PASSWORD = "{password}"
 CHROME_PROFILE_PATH = r"{path.replace('\\', '/')}" # Uses raw string for Windows path safety

@@ -3,7 +3,8 @@ import json
 import sys
 import requests
 from datetime import datetime, timedelta
-from config import CANVAS_URL, CANVAS_TOKEN, RECLAIM_API_KEY  # <- load from config.py
+# The RECLAIM_API_KEY import has been completely removed to fix the ImportError.
+from config import CANVAS_URL, CANVAS_TOKEN
 
 SEEN_FILE = "seen_assignments.json"
 
@@ -18,6 +19,7 @@ if not CANVAS_URL:
 
 # --- HELPER FUNCTIONS ---
 def load_seen():
+    """Loads previously seen assignments from a file."""
     if os.path.exists(SEEN_FILE):
         try:
             with open(SEEN_FILE, "r") as f:
@@ -28,10 +30,12 @@ def load_seen():
     return []
 
 def save_seen(seen):
+    """Saves the list of seen assignments to a file."""
     with open(SEEN_FILE, "w") as f:
         json.dump(seen, f, indent=2)
 
 def save_new_names_only(new_assignments: list):
+    """Saves the names and links of newly discovered assignments to a separate file."""
     NEW_NAMES_FILE = "new_assignment_names.json"
     names_and_details = [
         {
@@ -46,6 +50,7 @@ def save_new_names_only(new_assignments: list):
 
 # --- FETCH ASSIGNMENTS ---
 def fetch_assignments():
+    """Fetches assignments from Canvas API for all active courses."""
     headers = {"Authorization": f"Bearer {CANVAS_TOKEN}"}
     all_assignments = []
 
@@ -68,6 +73,7 @@ def fetch_assignments():
         if not course_id:
             continue
         assignments_url = f"{CANVAS_URL}/api/v1/courses/{course_id}/assignments"
+        # Only fetching unsubmitted assignments, ordered by due date
         params = {"bucket": "unsubmitted", "order_by": "due_at", "per_page": 50}
 
         try:
@@ -79,40 +85,18 @@ def fetch_assignments():
                 all_assignments.append(assignment)
             print(f"  Fetched {len(course_assignments)} assignments for {course_name}")
         except requests.exceptions.RequestException:
+            # Silently skip courses that might fail assignment retrieval
             continue
 
     return all_assignments
 
-# --- RECLAIM TASK CREATION ---
-def create_reclaim_task(title, due_date_iso, link):
-    if not RECLAIM_API_KEY:
-        print(f"Skipping Reclaim sync for {title}: No API Key found.")
-        return
-    url = "https://api.reclaim.ai/api/tasks"
-    headers = {
-        "Authorization": f"Bearer {RECLAIM_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "title": f"Assignment: {title}",
-        "dueDate": due_date_iso,
-        "duration": 60,
-        "priority": "DEFAULT",
-        "notes": f"Canvas Link: {link}",
-        "alwaysPrivate": True
-    }
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code in [200, 201]:
-            print(f"Added to Reclaim: {title}")
-        else:
-            print(f"Failed to add to Reclaim (Status {response.status_code}): {response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"Error connecting to Reclaim API: {e}")
+# The create_reclaim_task function has been removed.
 
 # --- MAIN SCRIPT ---
 def main():
+    """Main function to fetch, filter, and save new Canvas assignments."""
     seen_assignments = load_seen()
+    # Use a set for quick lookup of links
     seen_links = {a['html_url'] for a in seen_assignments if 'html_url' in a} 
     new_assignments = []
 
@@ -125,8 +109,11 @@ def main():
         due_date = ev.get("due_at")
         open_date = ev.get("unlock_at")
         course_name = ev.get("course_name", "Unknown")
+
+        # Basic validation
         if not link or not name or not due_date:
             continue
+            
         assignment_data = {
             "name": name,
             "html_url": link,
@@ -134,13 +121,14 @@ def main():
             "due_at": due_date,
             "unlock_at": open_date
         }
+
         if link not in seen_links:
             new_assignments.append(assignment_data)
             seen_assignments.append(assignment_data)
             seen_links.add(link)
             reclaim_title = f"[{course_name}] {name}"
             print(f"Ready to sync NEW assignment: {reclaim_title}. (Due: {due_date})")
-            # create_reclaim_task(reclaim_title, due_date, link)
+            # Removed the call to create_reclaim_task() here.
 
     save_seen(seen_assignments)
     save_new_names_only(new_assignments)
